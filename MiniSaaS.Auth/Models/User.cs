@@ -1,5 +1,6 @@
 ﻿namespace MiniSaaS.Auth.Models
 {
+    
     public class User
     {
         public Guid Id { get; set; }
@@ -11,6 +12,10 @@
         public string PasswordHash { get; set; } = string.Empty;
 
         public string Role { get; set; } = "User";
+
+        public Guid TenantId { get; set; }
+
+        public Tenant Tenant { get; set; } = null!;
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     }

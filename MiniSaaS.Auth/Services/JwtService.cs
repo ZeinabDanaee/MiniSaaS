@@ -8,11 +8,11 @@ namespace MiniSaaS.Auth.Services
 {
     public class JwtService
     {
-        private readonly IConfiguration _config;
+        private readonly IConfiguration _configuration;
 
-        public JwtService(IConfiguration config)
+        public JwtService(IConfiguration configuration)
         {
-            _config = config;
+            _configuration = configuration;
         }
 
         public string CreateToken(User user)
@@ -21,26 +21,36 @@ namespace MiniSaaS.Auth.Services
         {
             new(ClaimTypes.NameIdentifier, user.Id.ToString()),
             new(ClaimTypes.Email, user.Email),
-            new(ClaimTypes.Role, user.Role)
+            new(ClaimTypes.Role, user.Role),
+            new("tenant_id", user.TenantId.ToString())
         };
 
             var key = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(_config["Jwt:Key"]!)
+                Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]!)
             );
 
-            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+            var credentials = new SigningCredentials(
+                key,
+                SecurityAlgorithms.HmacSha256
+            );
 
             var token = new JwtSecurityToken(
-                issuer: _config["Jwt:Issuer"],
-                audience: _config["Jwt:Audience"],
+                issuer: _configuration["Jwt:Issuer"],
+                audience: _configuration["Jwt:Audience"],
                 claims: claims,
                 expires: DateTime.UtcNow.AddMinutes(
-                    int.Parse(_config["Jwt:ExpiryMinutes"]!)
+                    int.Parse(_configuration["Jwt:ExpiryMinutes"]!)
                 ),
-                signingCredentials: creds
+                signingCredentials: credentials
             );
 
-            return new JwtSecurityTokenHandler().WriteToken(token);
+            return new JwtSecurityTokenHandler()
+                .WriteToken(token);
+        }
+
+        public string GenerateRefreshToken()
+        {
+            return Guid.NewGuid().ToString("N");
         }
     }
 }
