@@ -50,7 +50,7 @@ namespace MiniSaaS.Auth.Services
 
         public string GenerateRefreshToken()
         {
-            return Guid.NewGuid().ToString("N");
+            return Convert.ToBase64String(Guid.NewGuid().ToByteArray());
         }
     }
 }

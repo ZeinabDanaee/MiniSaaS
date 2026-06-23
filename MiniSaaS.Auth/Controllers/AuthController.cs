@@ -47,11 +47,12 @@ public class AuthController : ControllerBase
             Email = dto.Email,
             FullName = dto.FullName,
             Role = "Admin",
-            Tenant = tenant
+            Tenant = tenant,
+            TenantId = tenant.Id,
         };
 
         user.PasswordHash =
-            _hasher.HashPassword(user, dto.Password);
+     _hasher.HashPassword(user, dto.Password);
 
         _db.Users.Add(user);
 
@@ -73,7 +74,7 @@ public class AuthController : ControllerBase
             .FirstOrDefaultAsync(x => x.Email == dto.Email);
 
         if (user == null)
-            return Unauthorized("Invalid email or password");
+            return Unauthorized("Invalid credentials");
 
         var result = _hasher.VerifyHashedPassword(
             user,
@@ -81,13 +82,65 @@ public class AuthController : ControllerBase
             dto.Password);
 
         if (result == PasswordVerificationResult.Failed)
-            return Unauthorized("Invalid email or password");
+            return Unauthorized("Invalid credentials");
 
         var accessToken = _jwt.CreateToken(user);
 
+        var refreshToken = new RefreshToken
+        {
+            Id = Guid.NewGuid(),
+            Token = _jwt.GenerateRefreshToken(),
+            UserId = user.Id,
+            ExpiresAt = DateTime.UtcNow.AddDays(7),
+            IsRevoked = false
+        };
+
+        _db.RefreshTokens.Add(refreshToken);
+        await _db.SaveChangesAsync();
+
         return Ok(new
         {
-            accessToken
+            accessToken,
+            refreshToken = refreshToken.Token
         });
+    }
+
+    [HttpPost("refresh")]
+    public async Task<IActionResult> Refresh(string refreshToken)
+    {
+        var token = await _db.RefreshTokens
+            .Include(x => x.User)
+            .FirstOrDefaultAsync(x => x.Token == refreshToken);
+
+        if (token == null)
+            return Unauthorized("Invalid refresh token");
+
+        if (token.IsRevoked)
+            return Unauthorized("Token revoked");
+
+        if (token.ExpiresAt < DateTime.UtcNow)
+            return Unauthorized("Token expired");
+
+        var newAccessToken = _jwt.CreateToken(token.User);
+
+        return Ok(new
+        {
+            accessToken = newAccessToken
+        });
+    }
+
+    [HttpPost("logout")]
+    public async Task<IActionResult> Logout(string refreshToken)
+    {
+        var token = await _db.RefreshTokens
+            .FirstOrDefaultAsync(x => x.Token == refreshToken);
+
+        if (token != null)
+        {
+            token.IsRevoked = true;
+            await _db.SaveChangesAsync();
+        }
+
+        return Ok();
     }
 }

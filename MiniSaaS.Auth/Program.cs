@@ -72,6 +72,9 @@ builder.Services
         };
     });
 
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<CurrentUserService>();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
