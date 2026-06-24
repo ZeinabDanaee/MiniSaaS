@@ -1,5 +1,10 @@
 ﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using MiniSaaS.Auth.Data;
+using MiniSaaS.Auth.Models;
+using MiniSaaS.Auth.Services;
 using System.Security.Claims;
 
 namespace MiniSaaS.Auth.Controllers;
@@ -8,6 +13,14 @@ namespace MiniSaaS.Auth.Controllers;
 [Route("api/[controller]")]
 public class UsersController : ControllerBase
 {
+    
+    private readonly AppDbContext _db;
+
+    public UsersController(AppDbContext db)
+    {
+        _db = db;
+    }
+
     [Authorize]
     [HttpGet("me")]
     public IActionResult Me()
@@ -31,5 +44,20 @@ public class UsersController : ControllerBase
             Role = role,
             TenantId = tenantId
         });
+    }
+
+    [Authorize]
+    [HttpGet("all")]
+    public async Task<IActionResult> GetAll()
+    {
+        var users = await _db.Users
+            .Select(x => new
+            {
+                x.Email,
+                x.TenantId
+            })
+            .ToListAsync();
+
+        return Ok(users);
     }
 }

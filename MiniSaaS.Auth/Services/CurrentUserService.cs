@@ -1,40 +1,39 @@
-﻿namespace MiniSaaS.Auth.Services
+﻿public class CurrentUserService
 {
-    using System.Security.Claims;
-   
-    public class CurrentUserService
+    private readonly IHttpContextAccessor _http;
+
+    public CurrentUserService(IHttpContextAccessor http)
     {
-        private readonly IHttpContextAccessor _context;
+        _http = http;
+    }
 
-        public CurrentUserService(IHttpContextAccessor context)
+    public Guid TenantId
+    {
+        get
         {
-            _context = context;
+            var httpContext = _http.HttpContext;
+
+            if (httpContext == null)
+                return Guid.Empty;
+
+            var claim = httpContext.User.FindFirst("tenant_id");
+
+            if (claim == null)
+                return Guid.Empty;
+
+            return Guid.Parse(claim.Value);
         }
+    }
 
-        public Guid? TenantId
+    public Guid UserId
+    {
+        get
         {
-            get
-            {
-                var value = _context.HttpContext?
-                    .User?
-                    .FindFirst("tenant_id")?
-                    .Value;
+            var httpContext = _http.HttpContext;
 
-                return value != null ? Guid.Parse(value) : null;
-            }
-        }
+            var claim = httpContext?.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
 
-        public Guid? UserId
-        {
-            get
-            {
-                var value = _context.HttpContext?
-                    .User?
-                    .FindFirst(ClaimTypes.NameIdentifier)?
-                    .Value;
-
-                return value != null ? Guid.Parse(value) : null;
-            }
+            return claim != null ? Guid.Parse(claim.Value) : Guid.Empty;
         }
     }
 }

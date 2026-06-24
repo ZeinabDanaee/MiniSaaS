@@ -74,6 +74,7 @@ builder.Services
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<CurrentUserService>();
+builder.Services.AddScoped<ITenantProvider, TenantProvider>();
 
 var app = builder.Build();
 
